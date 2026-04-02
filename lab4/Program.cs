@@ -1,7 +1,8 @@
-using System.Globalization;
-using System.Text.RegularExpressions;
 using Microsoft.ML;
 using Microsoft.ML.Data;
+using System.Globalization;
+using System.Reflection.Emit;
+using System.Text.RegularExpressions;
 
 namespace lab4;
 
@@ -159,11 +160,26 @@ internal static class Program
             Console.WriteLine("Недостаточно данных для обучения.");
             return;
         }
-
+        /*   Подготовка обучающей выборки
+   Список доменных объектов TrainTrip преобразуется в ML-формат
+        Distance — признак 1,
+        TravelTime — признак 2,
+        Label — целевая переменная (истинная средняя скорость).
+         */
         List<TrainData> trainData = trips.Select(t => t.ToTrainData()).ToList();
+/*
+        LoadFromEnumerable(trainData) превращает список в табличный формат ML.NET(IDataView), 
+            с которым работает pipeline.
+*/
         IDataView dataView = MlContext.Data.LoadFromEnumerable(trainData);
+/*
+        Сборка pipeline признаков и тренера
+oncatenate("Features", Distance, TravelTime) объединяет два числовых столбца в единый вектор признаков Features.
+Далее добавляется регрессионный тренер Sdca, где явно указано:
+labelColumnName = Label,
+featureColumnName = Features.*/
 
-        IEstimator<ITransformer> pipeline = MlContext.Transforms
+        IEstimator <ITransformer> pipeline = MlContext.Transforms
             .Concatenate("Features", nameof(TrainData.Distance), nameof(TrainData.TravelTime))
             .Append(MlContext.Regression.Trainers.Sdca(
                 labelColumnName: nameof(TrainData.Label),
